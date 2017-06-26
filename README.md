@@ -1,0 +1,2 @@
+# sftest
+SurfaceFlinger test bin.
