@@ -20,13 +20,15 @@ public:
         int       sleepBetweenFramesMs;
         int       drawCounts;
         int       format;
-        bool     opaque;
         float    alpha;
         int       zorder;
         int       width;
         int       heigth;
         int       x;
         int       y;
+        uint32_t flags;
+        bool    useBuffer;
+        uint32_t buffer;
     };
 };
 // ----------------------------------------------------------------------------

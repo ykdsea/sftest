@@ -55,6 +55,12 @@ private:
     int         mMaxDrawCnt;
     PixelFormat         mFormat;
     uint32_t         mFlags;
+
+    bool       mUseBuffer;
+    uint32_t         mConfigBufferData;
+    uint8_t*         mBuffer;
+    int         mBufferLen;
+
     float       mAlpha;
     uint32_t         mZorder;
     int         mDrawingCnt;

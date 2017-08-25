@@ -61,14 +61,22 @@ CpuTestRunner::CpuTestRunner(TestUtils::ConfigParameters cfgParam) : Thread(fals
     mX = cfgParam.x;
     mY = cfgParam.y;
     
-    mFlags = 0;
-    if (cfgParam.opaque) {
-        mFlags |= ISurfaceComposerClient::eOpaque;
+    mFlags = cfgParam.flags;
+
+    if (cfgParam.useBuffer) {
+        mUseBuffer = true;
+        mConfigBufferData = cfgParam.buffer;
+    } else {
+        mUseBuffer = false;
     }
+
     mDrawingCnt = 0;
 }
 
 CpuTestRunner::~CpuTestRunner() {
+    ALOGD("~CpuTestRunner");
+    if (mBuffer != NULL)
+        free(mBuffer);
 }
 
 void CpuTestRunner::onFirstRef() {
@@ -81,6 +89,26 @@ void CpuTestRunner::onFirstRef() {
     mANW = mSurfaceControl->getSurface();
     mWidth = windowSurface->getWidth();
     mHeight = windowSurface->getHeight();
+
+
+    if (mUseBuffer) {
+        int pixels = mWidth*mHeight;
+        int bytesPerPixel = sizeof(mConfigBufferData);
+        mBufferLen = pixels*bytesPerPixel;
+        //ALOGD("CpuTestRunner pixels %d, bytesPerPixel %d, len %d", pixels, bytesPerPixel, mBufferLen);
+        mBuffer = (uint8_t*)malloc(mBufferLen);
+        assert(mBuffer != NULL);
+
+        for (int i=0; i < pixels; i++) {
+            //memcpy(mBuffer+i*bytesPerPixel, &mConfigBufferData, bytesPerPixel);
+            mBuffer[i*bytesPerPixel] = ((mConfigBufferData & 0xff000000) >> 24);
+            mBuffer[i*bytesPerPixel+1] = ((mConfigBufferData & 0x00ff0000) >> 16);
+            mBuffer[i*bytesPerPixel+2] = ((mConfigBufferData & 0x0000ff00) >> 8);
+            mBuffer[i*bytesPerPixel+3] = (mConfigBufferData & 0x000000ff);
+        }
+    } else {
+        mBuffer = NULL;
+    }
 
     mMaxBuffers = DEFAULT_MAX_BUFFERS;
 
@@ -107,7 +135,7 @@ void CpuTestRunner::binderDied(const wp<IBinder>&)
 }
 
 status_t CpuTestRunner::readyToRun() {
-    ALOGI("display (%d x %d), format:0x%x, flags:0x%x", mWidth, mHeight, mFormat, mFlags);
+    ALOGI("display (%d x %d), format:0x%x, flags:0x%08x", mWidth, mHeight, mFormat, mFlags);
     // Config
     configureANW(mANW);
 
@@ -421,17 +449,22 @@ void CpuTestRunner::produceOneFrame(const sp<ANativeWindow>& anw,
         return ;
     }
 
-    switch (mFormat) {
-        case HAL_PIXEL_FORMAT_RGB_565:
-            fillRgb565Buffer(img, mWidth, mHeight, buf->getStride());
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_8888:
-            fillRgba8888Buffer(img, mWidth, mHeight, buf->getStride());
-            break;
-        default:
-            ALOGE("Unknown pixel format under test.");
-            break;
+    if (mUseBuffer) {
+        memcpy(img, mBuffer, mBufferLen);
+    } else {
+        switch (mFormat) {
+            case HAL_PIXEL_FORMAT_RGB_565:
+                fillRgb565Buffer(img, mWidth, mHeight, buf->getStride());
+                break;
+            case HAL_PIXEL_FORMAT_RGBA_8888:
+                fillRgba8888Buffer(img, mWidth, mHeight, buf->getStride());
+                break;
+            default:
+                ALOGE("Unknown pixel format under test.");
+                break;
+        }
     }
+
     ALOGV("Unlock buffer from %p", anw.get());
     err = buf->unlock();
     if (err != NO_ERROR) {

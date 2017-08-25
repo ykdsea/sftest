@@ -57,10 +57,7 @@ Gl2TestRunner::Gl2TestRunner(TestUtils::ConfigParameters cfgParam) : Thread(fals
     mX = cfgParam.x;
     mY = cfgParam.y;
 
-    mFlags = 0;
-    if (cfgParam.opaque) {
-        mFlags |= ISurfaceComposerClient::eOpaque;
-    }
+    mFlags = cfgParam.flags;
     mDrawingCnt = 0;
 }
 
@@ -161,7 +158,7 @@ status_t Gl2TestRunner::readyToRun() {
     mWidth = w;
     mHeight = h;
 
-    ALOGI("display (%d x %d), format:0x%x, flags:0x%x", mWidth, mHeight, mFormat, mFlags);
+    ALOGI("display (%d x %d), format:0x%x, flags:0x%08x", mWidth, mHeight, mFormat, mFlags);
 
     ALOGD("EGL version %d.%d", majorVersion, minorVersion);
     printGLString("Version", GL_VERSION);
